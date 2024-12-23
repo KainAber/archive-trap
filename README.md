@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository contains an easy way to stay up to date on recent publications on [arXiv,org](https://arxiv.org)
+This repository contains an easy way to stay up to date on recent publications on [arXiv.org](https://arxiv.org)
 by letting the user select a set of categories to search, e.g., *math.CO* and setting filters
 which check a list of fields against a list of keywords, e.g., the *author* field against *Peter Scholze* and *June Huh*.
 
