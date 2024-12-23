@@ -1,0 +1,21 @@
+run settings:
+  output folder: example/output
+  display by: filters
+data:
+  categories:
+    - math.RT
+    - math.CO
+  days to fetch: 7
+filters:
+  - name: People
+    fields:
+      - author
+    keywords:
+      - Peter Scholze
+      - June Huh
+  - name: Hypergraphs
+    fields:
+      - title
+      - summary
+    keywords:
+      - Hypergraph
