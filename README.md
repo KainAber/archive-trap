@@ -19,6 +19,7 @@ Intended audiences for this repository include:
 
 To set up the repository, follow these steps:
 
+0. Make sure you have [Python](https://www.python.org) installed on your machine (any version of Python 3 should suffice)
 1. Start by cloning it and installing the requirements
     ```bash
     git clone https://github.com/KainAber/arxiv-filter.git
