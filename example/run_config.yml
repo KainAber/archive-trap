@@ -1,6 +1,7 @@
 run settings:
   output folder: example/output
   display by: filters
+  max retries: 5
 data:
   categories:
     - math.RT
