@@ -1,3 +1,5 @@
+import logging
+import os
 import re
 import subprocess  # nosec
 from datetime import datetime, timedelta
@@ -6,6 +8,14 @@ from pathlib import Path
 from src.fetch import fetch_entries
 from src.filter import add_filter_flags
 from src.format import format_entries_as_html
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ArxivFilterRun:
@@ -23,16 +33,22 @@ class ArxivFilterRun:
 
         self.data_dict = cfg_dict["data"]
         self.categories = self.data_dict["categories"]
+        self.filters = self.cfg_dict["filters"]
+
+        # Optional arguments
         self.days_to_fetch = self.data_dict.get("days to fetch", 0)
         self.only_new_days = self.data_dict.get("only new days", False)
-
-        self.filters = self.cfg_dict["filters"]
+        self.max_retries = self.run_settings.get("max retries", 3)
 
         # Format output folder to be absolute
         project_root_folder_path = Path(__file__).resolve().parents[1]
         self.output_folder_path_absolute = (
             project_root_folder_path / self.output_folder_path
         ).resolve()
+
+        # Create folder
+        if not os.path.exists(self.output_folder_path_absolute):
+            os.makedirs(self.output_folder_path_absolute)
 
         # Setting future arguments
         self.entries = None
@@ -45,13 +61,20 @@ class ArxivFilterRun:
         self.calculate_timeframe()
 
         # Fetch entries
+        logger.info("Fetching all relevant entries")
         self.fetch_entries()
+
+        # Log filter and format
+        logger.info("Filtering and formatting entries")
 
         # Filter entries
         self.filter_entries()
 
         # Format entries
         self.format_entries()
+
+        # Log save and open
+        logger.info("Saving and opening results")
 
         # Save results
         self.save_results()
@@ -88,11 +111,13 @@ class ArxivFilterRun:
             )
 
             # Update start date to max end date
-            self.start_date = max_end_date
+            self.start_date = max_end_date - timedelta(days=1)
 
     def fetch_entries(self) -> None:
         # Retrieve all entries
-        self.entries = fetch_entries(self.start_date, self.end_date, self.categories)
+        self.entries = fetch_entries(
+            self.start_date, self.end_date, self.categories, self.max_retries
+        )
 
     def filter_entries(self) -> None:
         # Get filtered entries

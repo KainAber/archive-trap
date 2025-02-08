@@ -55,6 +55,9 @@ The `output folder` argument specifies the path to the folder where the HTML fil
 The `display by` argument can be set to `filters` or `entries` where the former displays results grouped by filters
 (entries may appear multiple times) and the latter displays each entry exactly once and summarises the relevant filters.
 
+There is an optional argument `max retries` for `run settings` which allows the user to set the maximally allowed retries per search chunk.
+If no value is passed, the default is set to `3`.
+
 ### Data
 
 **Example:**
