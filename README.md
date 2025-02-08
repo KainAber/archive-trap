@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository contains an easy way to stay up to date on recent publications on [arXiv,org](https://arxiv.org)
+This repository contains an easy way to stay up to date on recent publications on [arXiv.org](https://arxiv.org)
 by letting the user select a set of categories to search, e.g., *math.CO* and setting filters
 which check a list of fields against a list of keywords, e.g., the *author* field against *Peter Scholze* and *June Huh*.
 
@@ -19,9 +19,10 @@ Intended audiences for this repository include:
 
 To set up the repository, follow these steps:
 
+0. Make sure you have [Python](https://www.python.org) installed on your machine (the requirements should work for 3.8-11 but can be adjusted to fit the user's needs)
 1. Start by cloning it and installing the requirements
     ```bash
-    git clone https://github.com/KainAber/arxiv-filter.git
+    git clone https://github.com/KainAber/archive-trap.git
     pip install -r requirements.txt
     ```
 2. Optional: Update the `run config` value in `setup_config.yml` to the absolute path of the config file in which you want to specify the filters.
