@@ -32,10 +32,11 @@ def format_entries_as_html(
                 with tag("div", klass="header"):
                     text("arXiv Results")
                 with tag("div", klass="subheader"):
+                    doc.asis("<br>")
+                    text(", ".join(categories))
+                    doc.asis("<br><br>")
                     text(
-                        ", ".join(categories)
-                        + ": "
-                        + start_date.strftime("%d.%m.%Y")
+                        start_date.strftime("%d.%m.%Y")
                         + " - "
                         + end_date.strftime("%d.%m.%Y")
                     )

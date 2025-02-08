@@ -6,12 +6,13 @@ from typing import Iterable
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 from src.utils import get_entry_date
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
@@ -22,6 +23,7 @@ def fetch_entries(
     start_date: datetime.date,
     end_date: datetime.date,
     categories: Iterable[str],
+    max_retries,
 ) -> pd.DataFrame:
     # Construct categories query
     categories_with_prefix = ["cat:" + cat for cat in categories]
@@ -30,61 +32,109 @@ def fetch_entries(
     # Initialise result entries list
     result_entries = []
 
+    # Calculate number of days needed
+    num_days_to_fetch = (end_date - start_date).days
+
     # Create date for loop condition
     current_earliest_fetched_date = end_date
 
-    # Fetch entries while we have not reached beyond the earliest date
-    while start_date <= current_earliest_fetched_date:
+    # Create available retries to count down
+    available_retries = max_retries
 
-        # Define base URL
-        base_url = "http://export.arxiv.org/api/query"
+    # Create success flag for progress bar finalsiation
+    successful_fetch = True
 
-        # Define search parameters
-        params = {
-            "search_query": categories_concat_str,
-            "start": len(result_entries),
-            "max_results": 200,
-            "sortBy": "lastUpdatedDate",
-            "sortOrder": "descending",
-        }
+    # Log fetching
+    with tqdm(
+        total=num_days_to_fetch,
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}",
+    ) as pbar:
+        # Set description
+        pbar.set_description("Fetching days")
 
-        # Start the API timer
-        start_time = time.time()
-        # Make request
-        response = requests.get(base_url, params=params, timeout=10)
+        # Fetch entries while we have not reached beyond the earliest date
+        while start_date <= current_earliest_fetched_date:
 
-        # Create soup
-        soup = BeautifulSoup(response.text, features="xml")
+            # Define base URL
+            base_url = "http://export.arxiv.org/api/query"
 
-        # Get all new entries
-        new_entries = soup.find_all("entry")
+            # Define search parameters
+            params = {
+                "search_query": categories_concat_str,
+                "start": len(result_entries),
+                "max_results": 200,
+                "sortBy": "lastUpdatedDate",
+                "sortOrder": "descending",
+            }
 
-        # Break if no entries were found
-        if not new_entries:
-            logger.warning(
-                "Search chunk returned no entries, "
-                "likely due to bad user input or too frequent API requests. "
-                "Ending search"
-                f"Search parameters: {params}"
+            # Make request
+            response = requests.get(base_url, params=params, timeout=10)
+
+            # Create soup
+            soup = BeautifulSoup(response.text, features="xml")
+
+            # Get all new entries
+            new_entries = soup.find_all("entry")
+
+            # Retry if there are retries available
+            if not new_entries and available_retries > 0:
+                # Reduce available retries
+                available_retries -= 1
+
+                # Retries open
+                next_retry = max_retries - available_retries
+
+                # Update description progress bar
+                pbar.set_postfix({"Retries": f"{next_retry}/{max_retries}"})
+
+                # Wait for the API to recover (increase time for each try)
+                time.sleep(3 * next_retry)
+
+                # Retry
+                continue
+
+            if not new_entries and not available_retries > 0:
+                # Warn the user about the results
+                logger.warning(
+                    "Ending search due to empty API response, "
+                    "likely due to bad user input or too frequent API requests. "
+                    f"Search parameters: {params}"
+                )
+
+                # Update success flag for progress bar
+                successful_fetch = False
+
+                # Break out of the loop
+                break
+
+            # Append new entries
+            result_entries.extend(new_entries)
+
+            # Update earliest fetched date
+            current_earliest_fetched_date_new = min(
+                get_entry_date(entry) for entry in new_entries
             )
-            break
 
-        # Append new entries
-        result_entries.extend(new_entries)
+            # Calculate number of days fetched
+            new_days = (
+                current_earliest_fetched_date - current_earliest_fetched_date_new
+            ).days + 1
 
-        # Update earliest fetched date
-        current_earliest_fetched_date = min(
-            get_entry_date(entry) for entry in new_entries
-        )
+            # Update progress bar
+            pbar.update(min(new_days, pbar.total - pbar.n - 1))
 
-        # End the timer
-        execution_time = time.time() - start_time
+            # Reset progress bar comment
+            pbar.set_postfix("")
 
-        # Calculate the remaining time to 3 seconds
-        remaining_time = max(0, 4 - execution_time)
+            # Update loop conditional
+            current_earliest_fetched_date = current_earliest_fetched_date_new
 
-        # Wait for the remaining time (if any)
-        time.sleep(remaining_time)
+            # Reset the first try flag
+            available_retries = max_retries
+
+        # Update progress bar
+        if successful_fetch:
+            pbar.update(1)
 
     # Filter out entries from before the earliest day
     result_entries_in_timeframe = [
